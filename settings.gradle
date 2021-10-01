@@ -1,0 +1,7 @@
+rootProject.name = 'TestJava'
+
+include ':asm'
+include ':rnetty'
+
+project(":asm").projectDir = file("asm")
+project(":rnetty").projectDir = file("rnetty")

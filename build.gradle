@@ -1,0 +1,104 @@
+plugins {
+    id 'java'
+}
+
+group 'io.denery'
+version '0.1'
+
+project(":rnetty") {
+    group 'io.denery.rnetty'
+    apply plugin: 'java-library'
+
+    repositories {
+        mavenCentral()
+    }
+
+    sourceSets {
+        main {
+            java {
+                srcDirs = ["$rootDir/rnetty/main/java"]
+            }
+            resources {
+                srcDirs = ["$rootDir/rnetty/main/resources"]
+            }
+        }
+
+        test {
+            java {
+                srcDirs = ["$rootDir/rnetty/test/java"]
+            }
+            resources {
+                srcDirs = ["$rootDir/rnetty/test/resources"]
+            }
+        }
+    }
+
+    dependencies {
+        implementation 'com.google.code.gson:gson:2.8.8'
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+        implementation 'io.projectreactor.netty:reactor-netty-core:1.0.11'
+    }
+}
+
+project(":asm") {
+    group 'io.denery.asm'
+    apply plugin: 'java-library'
+
+    repositories {
+        mavenCentral()
+    }
+
+    sourceSets {
+        main {
+            java {
+                srcDirs = ["$rootDir/asm/main/java"]
+            }
+            resources {
+                srcDirs = ["$rootDir/asm/main/resources"]
+            }
+        }
+
+        test {
+            java {
+                srcDirs = ["$rootDir/asm/test/java"]
+            }
+            resources {
+                srcDirs = ["$rootDir/asm/test/resources"]
+            }
+        }
+    }
+
+    ext {
+        instrManifests = [
+                        'Main-Class' : 'io.denery.Main',
+                        'Premain-Class': 'io.denery.Main',
+                        'Agent-Class' : 'io.denery.Main',
+                        'Can-Redefine-Classes' : true,
+                        'Can-Retransform-Classes': true
+        ] as LinkedHashMap
+    }
+
+    jar {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        }
+        doFirst {
+            manifest.attributes(instrManifests)
+        }
+    }
+
+    dependencies {
+        implementation 'com.google.code.gson:gson:2.8.8'
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+        implementation group: 'org.ow2.asm', name: 'asm', version: '9.2'
+        implementation group: 'org.ow2.asm', name: 'asm-util', version: '9.2'
+
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
