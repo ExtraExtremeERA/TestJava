@@ -3,6 +3,11 @@ package io.denery.common.util;
 import java.nio.charset.StandardCharsets;
 
 public class TokenFormat {
+
+    /*
+        Generates simple token from String, can be easily complicated.
+        Looks like: 99#100#87#99#100#87#99#100#87#
+     */
     public static String generateToken(String nickname) {
         byte[] bytes = nickname.getBytes(StandardCharsets.UTF_8);
         String stringToken = "";
@@ -15,7 +20,9 @@ public class TokenFormat {
         }
         return stringToken;
     }
-
+    /*
+        Parses token from byte array coded in UTF-8.
+     */
     public static String getNameByToken(byte[] byteArray) {
         String token = new String(byteArray, StandardCharsets.UTF_8);
         char[] ch = new char[token.length()];

@@ -4,7 +4,10 @@ import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
-
+/*
+    A Super class for all packet types, has util functions,
+    for example: identifying, parsing each packet, parsing from raw byte stream, etc.
+ */
 public abstract class BNPacket {
     private byte id;
     private byte[] data;
