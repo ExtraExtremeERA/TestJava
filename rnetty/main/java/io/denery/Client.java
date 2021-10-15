@@ -1,8 +1,10 @@
 package io.denery;
 
-import io.denery.common.BNPacket;
-import io.denery.common.BNPackets;
-import io.denery.common.util.TokenFormat;
+import io.denery.common.PacketBootstrap;
+import io.denery.common.PacketUtils;
+import io.denery.util.TokenFormat;
+import io.denery.packets.AuthPacket;
+import io.denery.packets.VersionPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import reactor.core.publisher.Flux;;
@@ -16,6 +18,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class Client {
+    private static final PacketUtils utils = PacketUtils.getInstance(PacketBootstrap.getInstance()
+            .newPacketBuilder()
+            .registerPacket(new AuthPacket())
+            .registerPacket(new VersionPacket())
+            .build());
+
     public static void main(String[] args) {
         ClientLauncher launcher = new ClientLauncher();
 
@@ -50,8 +58,8 @@ public class Client {
                         e.printStackTrace();
                     }
                     String name = Double.toString(Math.random());
-                    s.next(Unpooled.wrappedBuffer(BNPacket.formatPacket(TokenFormat.generateToken(name)
-                            .getBytes(StandardCharsets.UTF_8), BNPackets.AUTH).getData()));
+                    s.next(Unpooled.wrappedBuffer(utils.formatPacket((byte) 0x1, TokenFormat.generateToken(name)
+                            .getBytes(StandardCharsets.UTF_8)).getData()));
                 }
             });
 

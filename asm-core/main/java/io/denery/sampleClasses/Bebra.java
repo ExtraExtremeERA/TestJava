@@ -1,6 +1,4 @@
-package io.denery;
-
-import java.io.PrintStream;
+package io.denery.sampleClasses;
 
 public class Bebra {
     private boolean abobification = true;

@@ -1,9 +1,70 @@
 plugins {
     id 'java'
+    id "io.github.reyerizo.gradle.jcstress" version "0.8.11" apply false
+}
+
+subprojects {
+    apply plugin: "io.github.reyerizo.gradle.jcstress"
+
+    repositories {
+        mavenCentral()
+    }
 }
 
 group 'io.denery'
 version '0.1'
+
+project(":regular-java") {
+    group 'io.denery.regjava'
+    apply plugin: 'java-library'
+
+    repositories {
+        mavenCentral()
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ["$rootDir/regular-java/main/java"]
+            resources.srcDirs = ["$rootDir/regular-java/main/resources"]
+        }
+
+        test {
+            java.srcDirs = ["$rootDir/regular-java/test/java"]
+            resources.srcDirs = ["$rootDir/regular-java/test/resources"]
+        }
+
+        jmh {
+            java.srcDirs = ["$rootDir/regular-java/jmh/java"]
+            compileClasspath += sourceSets.main.runtimeClasspath
+        }
+    }
+
+    //Only Testing/benchmarking dependencies.
+    dependencies {
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+        testImplementation group: 'org.junit.vintage', name: 'junit-vintage-engine', version: '5.8.1'
+        implementation group: 'org.openjdk.jol', name: 'jol-core', version: '0.16'
+        jmhImplementation group: 'org.openjdk.jmh', name: 'jmh-core', version: '1.33'
+        jmhAnnotationProcessor group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: '1.33'
+    }
+
+    task jcstressJava() {
+        dependsOn ":regular-java:jcstress"
+    }
+
+    task benchmark(type: JavaExec, dependsOn: jmhClasses) {
+        main = 'org.openjdk.jmh.Main'
+        jvmArgs = ["-Djdk.attach.allowAttachSelf"]
+        classpath = sourceSets.jmh.compileClasspath + sourceSets.jmh.runtimeClasspath
+    }
+    classes.finalizedBy(jmhClasses)
+
+    test {
+        useJUnitPlatform()
+        jvmArgs = ["-Djdk.attach.allowAttachSelf"]
+    }
+}
 
 project(":rnetty") {
     group 'io.denery.rnetty'
@@ -13,23 +74,25 @@ project(":rnetty") {
         mavenCentral()
     }
 
+    //jcstress plugin options for all subprojects, kinda weird but it is the simplest way to do so.
+    jcstress {
+        jcstressDependency 'org.openjdk.jcstress:jcstress-core:0.14'
+    }
+
     sourceSets {
         main {
-            java {
-                srcDirs = ["$rootDir/rnetty/main/java"]
-            }
-            resources {
-                srcDirs = ["$rootDir/rnetty/main/resources"]
-            }
+            java.srcDirs = ["$rootDir/rnetty/main/java"]
+            resources.srcDirs = ["$rootDir/rnetty/main/resources"]
         }
 
         test {
-            java {
-                srcDirs = ["$rootDir/rnetty/test/java"]
-            }
-            resources {
-                srcDirs = ["$rootDir/rnetty/test/resources"]
-            }
+            java.srcDirs = ["$rootDir/rnetty/test/java"]
+            resources.srcDirs = ["$rootDir/rnetty/test/resources"]
+        }
+
+        jmh {
+            java.srcDirs = ["$rootDir/rnetty/jmh/java"]
+            compileClasspath += sourceSets.main.runtimeClasspath
         }
     }
 
@@ -37,12 +100,32 @@ project(":rnetty") {
         implementation 'com.google.code.gson:gson:2.8.8'
         testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
         testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+        testImplementation group: 'org.junit.vintage', name: 'junit-vintage-engine', version: '5.8.1'
         implementation 'io.projectreactor.netty:reactor-netty-core:1.0.11'
+        implementation group: 'org.openjdk.jol', name: 'jol-core', version: '0.16'
+        jmhImplementation group: 'org.openjdk.jmh', name: 'jmh-core', version: '1.33'
+        jmhAnnotationProcessor group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: '1.33'
+    }
+
+    //Run this to benchmark rnetty by benchmarks contained in rnetty/jmh
+    task benchmark(type: JavaExec, dependsOn: jmhClasses) {
+        main = 'org.openjdk.jmh.Main'
+        jvmArgs = ["-Djdk.attach.allowAttachSelf"]
+        classpath = sourceSets.jmh.compileClasspath + sourceSets.jmh.runtimeClasspath
+    }
+    classes.finalizedBy(jmhClasses)
+
+    task jcstressRNetty() {
+        dependsOn ":rnetty:jcstress"
+    }
+
+    test {
+        useJUnitPlatform()
+        jvmArgs = ["-Djdk.attach.allowAttachSelf"]
     }
 }
 
-project(":asm") {
-    group 'io.denery.asm'
+project(":asm-core") {
     apply plugin: 'java-library'
 
     repositories {
@@ -51,32 +134,29 @@ project(":asm") {
 
     sourceSets {
         main {
-            java {
-                srcDirs = ["$rootDir/asm/main/java"]
-            }
-            resources {
-                srcDirs = ["$rootDir/asm/main/resources"]
-            }
+            java.srcDirs = ["$rootDir/asm-core/main/java"]
+            resources.srcDirs = ["$rootDir/asm-core/main/resources"]
         }
 
         test {
-            java {
-                srcDirs = ["$rootDir/asm/test/java"]
-            }
-            resources {
-                srcDirs = ["$rootDir/asm/test/resources"]
-            }
+            java.srcDirs = ["$rootDir/asm-core/test/java"]
+            resources.srcDirs = ["$rootDir/asm-core/test/resources"]
         }
     }
 
     ext {
         instrManifests = [
                         'Main-Class' : 'io.denery.Main',
-                        'Premain-Class': 'io.denery.Main',
-                        'Agent-Class' : 'io.denery.Main',
+                        'Premain-Class': 'io.denery.PreMain',
+                        'Agent-Class' : 'io.denery.AgentMain',
                         'Can-Redefine-Classes' : true,
                         'Can-Retransform-Classes': true
         ] as LinkedHashMap
+    }
+
+    task start(type: JavaExec, dependsOn: jar) {
+        main = 'io.denery.Main'
+        jvmArgs = ["-javaagent:/home/denery/IdeaProjects/TestJava/asm-core/build/libs/asm-core.jar"]
     }
 
     jar {
@@ -95,10 +175,9 @@ project(":asm") {
         testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
         implementation group: 'org.ow2.asm', name: 'asm', version: '9.2'
         implementation group: 'org.ow2.asm', name: 'asm-util', version: '9.2'
-
     }
-}
 
-test {
-    useJUnitPlatform()
+    test {
+        useJUnitPlatform()
+    }
 }

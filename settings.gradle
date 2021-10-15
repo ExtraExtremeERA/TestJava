@@ -1,7 +1,9 @@
 rootProject.name = 'TestJava'
 
-include ':asm'
+include ':regular-java'
+include ':asm-core'
 include ':rnetty'
 
-project(":asm").projectDir = file("asm")
-project(":rnetty").projectDir = file("rnetty")
+project(":regular-java").projectDir = file("regular-java") //Interesting java packages, no external libraries.
+project(":asm-core").projectDir = file("asm-core") //ASM Core API
+project(":rnetty").projectDir = file("rnetty") //Reactor netty
