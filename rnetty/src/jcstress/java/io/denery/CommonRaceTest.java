@@ -13,6 +13,7 @@ import java.util.Arrays;
 //@Outcome(id = "35", expect = Expect.ACCEPTABLE_INTERESTING, desc = "ID lost.")
 @Outcome(expect = Expect.ACCEPTABLE_INTERESTING, desc = "any other")
 @State
+//Another Temporary class that will be deleted/modified soon.
 public class CommonRaceTest {
     Flux<Packet> packets;
     public byte[] data = {49, 48, 48, 35, 49, 48, 49, 35, 49, 49, 48, 35, 49, 48, 49, 35, 49, 49, 52, 35, 49, 50, 49, 35, 1,

@@ -15,7 +15,6 @@ group 'io.denery'
 version '0.1'
 
 project(":regular-java") {
-    group 'io.denery.regjava'
     apply plugin: 'java-library'
 
     repositories {
@@ -67,7 +66,6 @@ project(":regular-java") {
 }
 
 project(":rnetty") {
-    group 'io.denery.rnetty'
     apply plugin: 'java-library'
 
     repositories {
@@ -154,7 +152,7 @@ project(":asm-core") {
         ] as LinkedHashMap
     }
 
-    task start(type: JavaExec, dependsOn: jar) {
+    task startASMCore(type: JavaExec, dependsOn: jar) {
         main = 'io.denery.Main'
         jvmArgs = ["-javaagent:/home/denery/IdeaProjects/TestJava/asm-core/build/libs/asm-core.jar"]
     }
@@ -174,6 +172,64 @@ project(":asm-core") {
         testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
         testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
         implementation group: 'org.ow2.asm', name: 'asm', version: '9.2'
+        implementation group: 'org.ow2.asm', name: 'asm-util', version: '9.2'
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}
+
+project(":asm-tree") {
+    apply plugin: 'java-library'
+
+    repositories {
+        mavenCentral()
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ["$rootDir/asm-tree/main/java"]
+            resources.srcDirs = ["$rootDir/asm-tree/main/resources"]
+        }
+
+        test {
+            java.srcDirs = ["$rootDir/asm-tree/test/java"]
+            resources.srcDirs = ["$rootDir/asm-tree/test/resources"]
+        }
+    }
+
+    ext {
+        instrManifests = [
+                'Main-Class' : 'io.denery.SampleLauncher',
+                'Premain-Class': 'io.denery.SampleAgent',
+                'Agent-Class' : 'io.denery.SampleAgent',
+                'Can-Redefine-Classes' : true,
+                'Can-Retransform-Classes': true
+        ] as LinkedHashMap
+    }
+
+    task startASMTree(type: JavaExec, dependsOn: jar) {
+        main = 'io.denery.SampleLauncher'
+        //AllowAttachSelf is important, if you don't set it you'll get an error.
+        jvmArgs = ["-Djdk.attach.allowAttachSelf=true", "-javaagent:/home/denery/IdeaProjects/TestJava/asm-tree/build/libs/asm-tree.jar"]
+    }
+
+    jar {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        }
+        doFirst {
+            manifest.attributes(instrManifests)
+        }
+    }
+
+    dependencies {
+        implementation 'com.google.code.gson:gson:2.8.8'
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+        implementation group: 'org.ow2.asm', name: 'asm-tree', version: '9.2'
         implementation group: 'org.ow2.asm', name: 'asm-util', version: '9.2'
     }
 

@@ -2,8 +2,10 @@ rootProject.name = 'TestJava'
 
 include ':regular-java'
 include ':asm-core'
+include ':asm-tree'
 include ':rnetty'
 
 project(":regular-java").projectDir = file("regular-java") //Interesting java packages, no external libraries.
 project(":asm-core").projectDir = file("asm-core") //ASM Core API
+project(":asm-tree").projectDir = file("asm-tree") //ASM Tree API
 project(":rnetty").projectDir = file("rnetty") //Reactor netty
