@@ -1,9 +1,10 @@
 arch: amd64
+sudo: true
+install: skip
+os: linux
 language: java
 jdk:
   - openjdk8
-sudo: true
-install: skip
 before_script:
   - chmod +x gradlew
 script:
