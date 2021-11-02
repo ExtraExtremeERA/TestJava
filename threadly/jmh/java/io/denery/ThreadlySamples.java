@@ -19,7 +19,7 @@ import java.util.concurrent.*;
 public class ThreadlySamples {
     @Param({"1", "24", "128"})
     int amountOfTasks;
-    private static final int tts = Runtime.getRuntime().availableProcessors();
+    private static final int tts = Runtime.getRuntime().availableProcessors() * 2;
 
     public static void doWork() {
         Blackhole.consumeCPU(4096);

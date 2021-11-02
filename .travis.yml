@@ -1,5 +1,4 @@
 arch: amd64
-sudo: true
 install: skip
 os: linux
 language: java
@@ -8,6 +7,7 @@ jdk:
 before_script:
   - chmod +x gradlew
 script:
+  - lscpu
   - bash gradlew jmhTHREADLY
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
