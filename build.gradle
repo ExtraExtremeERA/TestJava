@@ -1,239 +1,247 @@
+//Someday my brain got groovified so i made this script...
 plugins {
     id 'java'
     id "io.github.reyerizo.gradle.jcstress" version "0.8.11" apply false
+    id "me.champeau.jmh" version "0.6.6" apply false
 }
 
 subprojects {
     apply plugin: "io.github.reyerizo.gradle.jcstress"
+    apply plugin: "me.champeau.jmh"
 
     repositories {
         mavenCentral()
     }
 }
+
+def sourceSetsInit = { String name ->
+    project(":${name.replace('/', ':')}") {
+        sourceSets {
+            main {
+                java.srcDirs = ["$rootDir/${name}/main/java"]
+                resources.srcDirs = ["$rootDir/${name}/main/resources"]
+            }
+
+            test {
+                java.srcDirs = ["$rootDir/${name}/test/java"]
+                resources.srcDirs = ["$rootDir/${name}/test/resources"]
+            }
+
+            jmh {
+                java.srcDirs = ["$rootDir/${name}/jmh/java"]
+                compileClasspath += sourceSets.main.runtimeClasspath
+            }
+
+            jcstress {
+                java.srcDirs = ["$rootDir/${name}/jcstress/java"]
+            }
+        }
+    }
+}
+
+def manifestsInit = { String name, ArrayList<String> allowedNames,
+                     ArrayList<LinkedHashMap<String, String>> manifests ->
+    project(":${name}") {
+        ext {
+            allowedNames.forEach(aw -> {
+                if (name == aw) {
+                    manifests.forEach(manifest ->
+                            instrManifests = manifest
+                    )
+                }
+            })
+        }
+
+        tasks.register("start${name.toUpperCase().replace(':', '-')}", JavaExec) {
+            allowedNames.forEach(aw -> {
+                if (name == aw) {
+                    it.dependsOn(":jar")
+                    it.main = (instrManifests as LinkedHashMap).get("Main-Class")
+                    //AllowAttachSelf is important, if you don't set it you'll get an error.
+                    it.jvmArgs = ["-Djdk.attach.allowAttachSelf=true",
+                                  "-javaagent:/home/denery/IdeaProjects/TestJava/${name}/build/libs/${name}.jar"]
+                }
+            })
+        }
+    }
+}
+
+def jmhAndJCStressInit = {String name ->
+    project(":${name}") {
+        tasks.register("jcstress${name.toUpperCase().replace(':', '-')}", DefaultTask) {
+            it.dependsOn(":${project.name}:jcstress")
+        }
+
+        tasks.register("jmh${name.toUpperCase().replace(':', '-')}", DefaultTask) {
+            it.dependsOn(":${project.name}:jmh")
+        }
+    }
+}
+
+def tests = ["regular-java", "rnetty", "asm-core", "asm-tree", "unimi-dsi-fastutil", "threadly", "ibm-asyncutil"]
+def libraries = ["denery-packetutil"]
 
 group 'io.denery'
 version '0.1'
+tests.forEach(example ->
+    project(":${example}") {
+        libraries.forEach(lib ->
+                evaluationDependsOn(":libraries:${lib}")
+        )
+        apply plugin: 'java-library'
 
-project(":regular-java") {
-    apply plugin: 'java-library'
-
-    repositories {
-        mavenCentral()
-    }
-
-    sourceSets {
-        main {
-            java.srcDirs = ["$rootDir/regular-java/main/java"]
-            resources.srcDirs = ["$rootDir/regular-java/main/resources"]
-        }
-
-        test {
-            java.srcDirs = ["$rootDir/regular-java/test/java"]
-            resources.srcDirs = ["$rootDir/regular-java/test/resources"]
+        jcstress {
+            jcstressDependency 'org.openjdk.jcstress:jcstress-core:0.14'
         }
 
         jmh {
-            java.srcDirs = ["$rootDir/regular-java/jmh/java"]
-            compileClasspath += sourceSets.main.runtimeClasspath
-        }
-    }
-
-    //Only Testing/benchmarking dependencies.
-    dependencies {
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
-        testImplementation group: 'org.junit.vintage', name: 'junit-vintage-engine', version: '5.8.1'
-        implementation group: 'org.openjdk.jol', name: 'jol-core', version: '0.16'
-        jmhImplementation group: 'org.openjdk.jmh', name: 'jmh-core', version: '1.33'
-        jmhAnnotationProcessor group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: '1.33'
-    }
-
-    task jcstressJava() {
-        dependsOn ":regular-java:jcstress"
-    }
-
-    task benchmark(type: JavaExec, dependsOn: jmhClasses) {
-        main = 'org.openjdk.jmh.Main'
-        jvmArgs = ["-Djdk.attach.allowAttachSelf"]
-        classpath = sourceSets.jmh.compileClasspath + sourceSets.jmh.runtimeClasspath
-    }
-    classes.finalizedBy(jmhClasses)
-
-    test {
-        useJUnitPlatform()
-        jvmArgs = ["-Djdk.attach.allowAttachSelf"]
-    }
-}
-
-project(":rnetty") {
-    apply plugin: 'java-library'
-
-    repositories {
-        mavenCentral()
-    }
-
-    //jcstress plugin options for all subprojects, kinda weird but it is the simplest way to do so.
-    jcstress {
-        jcstressDependency 'org.openjdk.jcstress:jcstress-core:0.14'
-    }
-
-    sourceSets {
-        main {
-            java.srcDirs = ["$rootDir/rnetty/main/java"]
-            resources.srcDirs = ["$rootDir/rnetty/main/resources"]
+            fork = 1
+            threads = 4
         }
 
-        test {
-            java.srcDirs = ["$rootDir/rnetty/test/java"]
-            resources.srcDirs = ["$rootDir/rnetty/test/resources"]
+        sourceSetsInit(example)
+
+        dependencies {
+            testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+            testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+            testImplementation group: 'org.junit.vintage', name: 'junit-vintage-engine', version: '5.8.1'
+            implementation group: 'org.openjdk.jol', name: 'jol-core', version: '0.16'
+            jmh group: 'org.openjdk.jmh', name: 'jmh-core', version: '1.33'
+            jmh group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: '1.33'
+            switch (example) {
+                case "rnetty": {
+                    implementation project(':libraries:denery-packetutil')
+                    implementation 'io.projectreactor.netty:reactor-netty-core:1.0.11'
+                    return
+                }
+                case "asm-core": {
+                    implementation group: 'org.ow2.asm', name: 'asm', version: '9.2'
+                    implementation group: 'org.ow2.asm', name: 'asm-util', version: '9.2'
+                    return
+                }
+                case "asm-tree": {
+                    implementation group: 'org.ow2.asm', name: 'asm-tree', version: '9.2'
+                    implementation group: 'org.ow2.asm', name: 'asm-util', version: '9.2'
+                    return
+                }
+                case "unimi-dsi-fastutil": {
+                    implementation group: 'it.unimi.dsi', name: 'fastutil', version: '8.5.6'
+                    return
+                }
+                case "threadly": {
+                    implementation group: 'org.threadly', name: 'threadly', version: '6.6'
+                    return
+                }
+                case "ibm-asyncutil": {
+                    implementation group: 'com.ibm.async', name: 'asyncutil-flow', version: '0.1.0'
+                    implementation group: 'com.ibm.async', name: 'asyncutil', version: '0.1.0'
+                    return
+                }
+
+                default: return
+            }
         }
 
-        jmh {
-            java.srcDirs = ["$rootDir/rnetty/jmh/java"]
-            compileClasspath += sourceSets.main.runtimeClasspath
-        }
-    }
-
-    dependencies {
-        implementation 'com.google.code.gson:gson:2.8.8'
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
-        testImplementation group: 'org.junit.vintage', name: 'junit-vintage-engine', version: '5.8.1'
-        implementation 'io.projectreactor.netty:reactor-netty-core:1.0.11'
-        implementation group: 'org.openjdk.jol', name: 'jol-core', version: '0.16'
-        jmhImplementation group: 'org.openjdk.jmh', name: 'jmh-core', version: '1.33'
-        jmhAnnotationProcessor group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: '1.33'
-    }
-
-    //Run this to benchmark rnetty by benchmarks contained in rnetty/jmh
-    task benchmark(type: JavaExec, dependsOn: jmhClasses) {
-        main = 'org.openjdk.jmh.Main'
-        jvmArgs = ["-Djdk.attach.allowAttachSelf"]
-        classpath = sourceSets.jmh.compileClasspath + sourceSets.jmh.runtimeClasspath
-    }
-    classes.finalizedBy(jmhClasses)
-
-    task jcstressRNetty() {
-        dependsOn ":rnetty:jcstress"
-    }
-
-    test {
-        useJUnitPlatform()
-        jvmArgs = ["-Djdk.attach.allowAttachSelf"]
-    }
-}
-
-project(":asm-core") {
-    apply plugin: 'java-library'
-
-    repositories {
-        mavenCentral()
-    }
-
-    sourceSets {
-        main {
-            java.srcDirs = ["$rootDir/asm-core/main/java"]
-            resources.srcDirs = ["$rootDir/asm-core/main/resources"]
-        }
-
-        test {
-            java.srcDirs = ["$rootDir/asm-core/test/java"]
-            resources.srcDirs = ["$rootDir/asm-core/test/resources"]
-        }
-    }
-
-    ext {
-        instrManifests = [
-                        'Main-Class' : 'io.denery.Main',
-                        'Premain-Class': 'io.denery.PreMain',
-                        'Agent-Class' : 'io.denery.AgentMain',
-                        'Can-Redefine-Classes' : true,
-                        'Can-Retransform-Classes': true
-        ] as LinkedHashMap
-    }
-
-    task startASMCore(type: JavaExec, dependsOn: jar) {
-        main = 'io.denery.Main'
-        jvmArgs = ["-javaagent:/home/denery/IdeaProjects/TestJava/asm-core/build/libs/asm-core.jar"]
-    }
-
-    jar {
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-        from {
-            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-        }
-        doFirst {
-            manifest.attributes(instrManifests)
-        }
-    }
-
-    dependencies {
-        implementation 'com.google.code.gson:gson:2.8.8'
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
-        implementation group: 'org.ow2.asm', name: 'asm', version: '9.2'
-        implementation group: 'org.ow2.asm', name: 'asm-util', version: '9.2'
-    }
-
-    test {
-        useJUnitPlatform()
-    }
-}
-
-project(":asm-tree") {
-    apply plugin: 'java-library'
-
-    repositories {
-        mavenCentral()
-    }
-
-    sourceSets {
-        main {
-            java.srcDirs = ["$rootDir/asm-tree/main/java"]
-            resources.srcDirs = ["$rootDir/asm-tree/main/resources"]
-        }
-
-        test {
-            java.srcDirs = ["$rootDir/asm-tree/test/java"]
-            resources.srcDirs = ["$rootDir/asm-tree/test/resources"]
-        }
-    }
-
-    ext {
-        instrManifests = [
+        jmhAndJCStressInit(example)
+        manifestsInit(example, ["asm-core", "asm-tree"], [[
+                'Main-Class' : 'io.denery.Main',
+                'Premain-Class': 'io.denery.PreMain',
+                'Agent-Class' : 'io.denery.AgentMain',
+                'Can-Redefine-Classes' : true,
+                'Can-Retransform-Classes': true
+        ] as LinkedHashMap, [
                 'Main-Class' : 'io.denery.SampleLauncher',
                 'Premain-Class': 'io.denery.SampleAgent',
                 'Agent-Class' : 'io.denery.SampleAgent',
                 'Can-Redefine-Classes' : true,
                 'Can-Retransform-Classes': true
-        ] as LinkedHashMap
-    }
+        ] as LinkedHashMap])
 
-    task startASMTree(type: JavaExec, dependsOn: jar) {
-        main = 'io.denery.SampleLauncher'
-        //AllowAttachSelf is important, if you don't set it you'll get an error.
-        jvmArgs = ["-Djdk.attach.allowAttachSelf=true", "-javaagent:/home/denery/IdeaProjects/TestJava/asm-tree/build/libs/asm-tree.jar"]
-    }
-
-    jar {
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-        from {
-            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-        }
-        doFirst {
-            manifest.attributes(instrManifests)
+        test {
+            useJUnitPlatform()
+            jvmArgs = ["-Djdk.attach.allowAttachSelf=true"]
         }
     }
+)
 
-    dependencies {
-        implementation 'com.google.code.gson:gson:2.8.8'
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
-        implementation group: 'org.ow2.asm', name: 'asm-tree', version: '9.2'
-        implementation group: 'org.ow2.asm', name: 'asm-util', version: '9.2'
-    }
+libraries.forEach(lib ->
+    project(":libraries:${lib}") {
+        apply plugin: 'java-library'
 
-    test {
-        useJUnitPlatform()
+        jcstress {
+            jcstressDependency 'org.openjdk.jcstress:jcstress-core:0.14'
+        }
+
+        sourceSetsInit("libraries/${lib}")
+
+        dependencies {
+            testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+            testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+            testImplementation group: 'org.junit.vintage', name: 'junit-vintage-engine', version: '5.8.1'
+            implementation group: 'org.openjdk.jol', name: 'jol-core', version: '0.16'
+            jmh group: 'org.openjdk.jmh', name: 'jmh-core', version: '1.33'
+            jmh group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: '1.33'
+            switch (lib) {
+                case "denery-packetutil": {
+                    implementation group: 'io.projectreactor', name: 'reactor-core', version: '3.4.11'
+                    implementation group: 'it.unimi.dsi', name: 'fastutil', version: '8.5.6'
+                    return
+                }
+
+                default: return
+            }
+        }
+        jmhAndJCStressInit("libraries:${lib}")
+        //manifestsInit("proof-of-concepts:${poc}", ["network-bytecode-manipulation"], [[]])
+
+        test {
+            useJUnitPlatform()
+            jvmArgs = ["-Djdk.attach.allowAttachSelf=true"]
+        }
     }
-}
+)
+
+["network-bytecode-manipulation"].forEach(poc ->
+        project(":proof-of-concepts:${poc}") {
+            tests.forEach(test ->
+                    evaluationDependsOn(":${test}")
+            )
+            apply plugin: 'java-library'
+
+            jcstress {
+                jcstressDependency 'org.openjdk.jcstress:jcstress-core:0.14'
+            }
+
+            sourceSetsInit("proof-of-concepts/${poc}")
+
+            dependencies {
+                testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+                testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+                testImplementation group: 'org.junit.vintage', name: 'junit-vintage-engine', version: '5.8.1'
+                implementation group: 'org.openjdk.jol', name: 'jol-core', version: '0.16'
+                jmh group: 'org.openjdk.jmh', name: 'jmh-core', version: '1.33'
+                jmh group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: '1.33'
+                switch (poc) {
+                    case "network-bytecode-manipulation": {
+                        implementation project(":libraries:denery-packetutil")
+                        implementation 'io.projectreactor.netty:reactor-netty-core:1.0.11'
+                        implementation group: 'org.ow2.asm', name: 'asm-tree', version: '9.2'
+                        implementation group: 'org.ow2.asm', name: 'asm-util', version: '9.2'
+                        implementation group: 'org.threadly', name: 'threadly', version: '6.6'
+                        implementation group: 'com.ibm.async', name: 'asyncutil', version: '0.1.0'
+                        implementation group: 'it.unimi.dsi', name: 'fastutil', version: '8.5.6'
+                        return
+                    }
+
+                    default: return
+                }
+            }
+            jmhAndJCStressInit("proof-of-concepts:${poc}")
+            //manifestsInit("proof-of-concepts:${poc}", ["network-bytecode-manipulation"], [[]])
+
+            test {
+                useJUnitPlatform()
+                jvmArgs = ["-Djdk.attach.allowAttachSelf=true"]
+            }
+        }
+)

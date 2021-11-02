@@ -16,14 +16,13 @@ public record SampleClassTransformer(String targetClassName, ClassLoader targetC
                             ProtectionDomain protectionDomain, byte[] classfileBuffer) {
 
         final String dottedClassName = className.replace("/", ".");
-        if (!className.equals(targetClassName.replaceAll("\\.", "/"))) return classfileBuffer;
+        if (!dottedClassName.equals(targetClassName)) return classfileBuffer;
 
         System.out.println("Class in transform: " + dottedClassName + "\n");
         System.out.println("Target class: " + targetClassName + "\n");
 
         ClassWriter cw = null;
-        if (dottedClassName.equals(targetClassName)
-                && loader.equals(targetClassLoader)) {
+        if (loader.equals(targetClassLoader)) {
             try {
                 ClassNode cn = new ClassNode(ASM9);
                 ClassReader cr = new ClassReader(dottedClassName);

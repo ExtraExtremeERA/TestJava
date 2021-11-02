@@ -4,8 +4,33 @@ include ':regular-java'
 include ':asm-core'
 include ':asm-tree'
 include ':rnetty'
+include ':unimi-dsi-fastutil'
+include ':threadly'
+include ':ibm-asyncutil'
 
-project(":regular-java").projectDir = file("regular-java") //Interesting java packages, no external libraries.
-project(":asm-core").projectDir = file("asm-core") //ASM Core API
-project(":asm-tree").projectDir = file("asm-tree") //ASM Tree API
-project(":rnetty").projectDir = file("rnetty") //Reactor netty
+// Libraries which have written while developing some examples (sounds weird but yeah).
+include ':libraries'
+
+// Denery's PacketUtil used by examples and concept with networking.
+include ':libraries:denery-packetutil'
+
+// Proof of concepts. Really weird concepts, which use examples or packages from test subprojects.
+// Less experimental and can be used by some projects with its enhancements sure.
+include ':proof-of-concepts'
+
+// The concept is quite simple: Server and Client have common classes, while starting server may modify
+// its common, so client also needs to modify its common. If server common has modified then server needs to
+// send info to client about modification and client needs to apply this modification.
+include ':proof-of-concepts:network-bytecode-manipulation'
+
+project(":regular-java").projectDir = file("regular-java") //Interesting java packages and benchmarks, no external libraries.
+project(":asm-core").projectDir = file("asm-core") //ASM Core API, SAX like java bytecode manipulation api.
+project(":asm-tree").projectDir = file("asm-tree") //ASM Tree API, DOM like java bytecode manipulation api.
+project(":rnetty").projectDir = file("rnetty") //Reactor netty, reactive implementation of Netty using project Reactor,
+project(":unimi-dsi-fastutil").projectDir = file("unimi-dsi-fastutil") //it.unimi.dsi.fastutil fast collections library.
+project(":ibm-asyncutil").projectDir = file("ibm-asyncutil") //Library extending java's CompletionStages.
+
+//Controversial or little-known libraries.
+
+// WORKS ONLY ON JAVA 8.
+project(":threadly").projectDir = file("threadly") //Advanced safe concurrency lib, providing many Thread pools and utilities to manipulate them.

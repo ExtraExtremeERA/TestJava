@@ -15,6 +15,7 @@ public record TestClassTransformer(String targetClassName, ClassLoader targetCla
                             ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 
         final String dottedClassName = className.replace("/", ".");
+        if (!dottedClassName.equals(targetClassName)) return classfileBuffer;
 
         System.out.println("Classloader name in transform: " + loader.getName());
         System.out.println();
@@ -26,8 +27,7 @@ public record TestClassTransformer(String targetClassName, ClassLoader targetCla
         System.out.println();
 
         ClassWriter cw = null;
-        if (dottedClassName.equals(targetClassName)
-                && loader.equals(targetClassLoader)) {
+        if (loader.equals(targetClassLoader)) {
             try {
                 ClassReader cr = new ClassReader(dottedClassName);
                 cw = new ClassWriter(cr, 0);

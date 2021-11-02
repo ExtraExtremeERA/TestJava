@@ -2,12 +2,12 @@ package io.denery.packets;
 
 import io.denery.packetutil.Packet;
 
-public class AuthPacket extends Packet {
-    public AuthPacket(byte[] data) {
+public class SampleAuthPacket extends Packet {
+    public SampleAuthPacket(byte[] data) {
         super((byte) 0x1, data);
     }
 
-    public AuthPacket() {
+    public SampleAuthPacket() {
         super((byte) 0x1);
     }
 }

@@ -1,10 +1,10 @@
 package io.denery;
 
-import io.denery.common.PacketBootstrap;
-import io.denery.common.PacketUtils;
-import io.denery.util.TokenFormat;
 import io.denery.packets.AuthPacket;
 import io.denery.packets.VersionPacket;
+import io.denery.packetutil.PacketBootstrap;
+import io.denery.packetutil.utils.PacketUnsafeUtils;
+import io.denery.util.TokenFormat;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import reactor.core.publisher.Flux;;
@@ -18,7 +18,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class Client {
-    private static final PacketUtils utils = PacketUtils.getInstance(PacketBootstrap.getInstance()
+    //Denery's library for simple packaging of data, you don't need to learn this lib, it is created for simplicity
+    // of visualising examples with networking, that's all.
+    private static final PacketUnsafeUtils utils = PacketUnsafeUtils.getInstance(PacketBootstrap.getInstance()
             .newPacketBuilder()
             .registerPacket(new AuthPacket())
             .registerPacket(new VersionPacket())
@@ -57,6 +59,7 @@ public class Client {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+
                     String name = Double.toString(Math.random());
                     s.next(Unpooled.wrappedBuffer(utils.formatPacket((byte) 0x1, TokenFormat.generateToken(name)
                             .getBytes(StandardCharsets.UTF_8)).getData()));
